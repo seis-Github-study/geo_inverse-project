@@ -3,6 +3,7 @@
 %完成colinterp2,lineinterp2,colinterp4,lineinterp4,linesearch,colsearch
 %6个函数，需要注意插值函数需要能够分别对1和2,3和4进行插值，search函数需要严格注释里的需求进行改进设计
 %如果有可能的话，完成对G矩阵的重构工作
+%还有h5部分需要完成
 startpointx=[1,2,3,4,5,6];
 startpointy=[1,2,3,4,5,6];
 endpointx=[10,11,12,13];
