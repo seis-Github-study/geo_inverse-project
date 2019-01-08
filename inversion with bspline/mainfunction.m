@@ -4,6 +4,7 @@
 %6个函数，需要注意插值函数需要能够分别对1和2,3和4进行插值，search函数需要严格注释里的需求进行改进设计
 %如果有可能的话，完成对G矩阵的重构工作
 %还有h5部分需要完成
+clear
 startpointx=[1,2,3,4,5,6];
 startpointy=[1,2,3,4,5,6];
 endpointx=[10,11,12,13];
@@ -52,17 +53,17 @@ G_sensitivity_low=2;
 I=find(G_sensitivity<10e-15);
 G_sensitivity(I)=-1;
 %找到所有小点，设为0
-[row_small,col_small]=find((G_sensitivity.*(G_sensitivity-G_sensitivity_low))<=10e-15);
-G_sensitivity(row_small,col_small)=0;
+[row,col]=find((G_sensitivity.*(G_sensitivity-G_sensitivity_low))<=10e-15);
+G_sensitivity(row,col)=0;
 
 %% 进行检索并插值
-small_num=length(row_small);
+small_num=length(row);
 %point,pointa,,pointb,,pointc,,pointd,wa,wb,wc,wd     (x,y)
 W_small=zeros(small_num,14);
 %插值的距离之和上限
 updistance=10;
 for i=1:smallnum
-    W_small(i,1)=col_small(i);
+    W_small(i,1)=col(i);
     W_small(i,2)=line_small(i);
     w1=0;
     w2=0;
@@ -78,11 +79,11 @@ for i=1:smallnum
     %c1 都得到两个点的情况
     if abs(datapointline(row(i),6)-2)<10e-15&&abs(datapointcol(col(i),6)-2)<10e-15
         if datapointline(row(i),5)<=datapointcol(col(i),5)
-            [w1.w2]=lineinterp2(datapointline(row(i),1:4));
+            [w1.w2]=lineinterp2(datapointline(row(i),1:4),col(i),row(i));
             W_small(i,3:6)=datapointline(row(i),1:4);
             W_small(i,11:12)=[w1,w2];
         else
-            [w1.w2]=colinterp2(datapointcol(col(i),1:4));
+            [w1.w2]=colinterp2(datapointcol(col(i),1:4),col(i),row(i));
             W_small(i,3:6)=datapointcol(col(i),1:4);
             W_small(i,11:12)=[w1,w2];
         end
@@ -90,13 +91,13 @@ for i=1:smallnum
     end
     %c2 只有一个2各点的情况
     if abs(datapointline(row(i),6)-2)<10e-15&&~(abs(datapointcol(col(i),6)-2)<10e-15)
-        [w1.w2]=lineinterp2(datapointline(row(i),1:4));
+        [w1.w2]=lineinterp2(datapointline(row(i),1:4),col(i),row(i));
         W_small(i,3:6)=datapointline(row(i),1:4);
         W_small(i,11:12)=[w1,w2];
         continue
     end
     if abs(~(datapointline(row(i),6)-2)<10e-15)&&(abs(datapointcol(col(i),6)-2)<10e-15)
-        [w1.w2]=colinterp2(datapointcol(col(i),1:4));
+        [w1.w2]=colinterp2(datapointcol(col(i),1:4),col(i),row(i));
         W_small(i,3:6)=datapointcol(col(i),1:4);
         W_small(i,11:12)=[w1,w2];
         continue
@@ -204,12 +205,12 @@ for i=1:smallnum
     %h1
     if line_up*line_low*col_left*col_right>0
         if datapointlineup(1,5)+datapointlinelow(1,5)<=datapointcolleft(1,5)+datapointright(1,5)
-            [w1,w2,w3,w4]=lineinterp4(datapointlineup(1,1:4),datapointlinelow(1,1:4));%注意这个函数里面需要判断一下哪个第二个元素为0，然后设置它的坐标和权重都是0
+            [w1,w2,w3,w4]=lineinterp4(datapointlineup(1,1:4),datapointlinelow(1,1:4),col(i),row(i));%注意这个函数里面需要判断一下哪个第二个元素为0，然后设置它的坐标和权重都是0
             W_small(i,3:10)=[datapointlineup(1,1:4),datapointlinelow(1,1:4)];
             W_small(i,11:14)=[w1,w2,w3,w4];
             continue
         else
-            [w1,w2,w3,w4]=colinterp4(datapointcolleft(1,1:4),datapointcolright(1,1:4));%注意这个函数里面需要判断一下哪个第二个元素为0，然后设置它的坐标和权重都是0
+            [w1,w2,w3,w4]=colinterp4(datapointcolleft(1,1:4),datapointcolright(1,1:4),col(i),row(i));%注意这个函数里面需要判断一下哪个第二个元素为0，然后设置它的坐标和权重都是0
             W_small(i,3:10)=[datapointcolleft(1,1:4),datapointcolright(1,1:4)];
             W_small(i,11:14)=[w1,w2,w3,w4];
             continue
@@ -217,20 +218,20 @@ for i=1:smallnum
     end
     %h2
     if line_up*line_low>0 &&col_left*col_right<10e-16
-            [w1,w2,w3,w4]=lineinterp4(datapointlineup(1,1:4),datapointlinelow(1,1:4));%注意这个函数里面需要判断一下哪个第二个元素为0，然后设置它的坐标和权重都是0
-            W_small(i,3:10)=[datapointlineup(1,1:4),datapointlinelow(1,1:4)];
-            W_small(i,11:14)=[w1,w2,w3,w4];
-            continue
+        [w1,w2,w3,w4]=lineinterp4(datapointlineup(1,1:4),datapointlinelow(1,1:4),col(i),row(i));%注意这个函数里面需要判断一下哪个第二个元素为0，然后设置它的坐标和权重都是0
+        W_small(i,3:10)=[datapointlineup(1,1:4),datapointlinelow(1,1:4)];
+        W_small(i,11:14)=[w1,w2,w3,w4];
+        continue
     end
-        %h3
-        if line_up*line_low<10e-16 &&col_left*col_right>0
-            [w1,w2,w3,w4]=colinterp4(datapointcolleft(1,1:4),datapointcolright(1,1:4));%注意这个函数里面需要判断一下哪个第二个元素为0，然后设置它的坐标和权重都是0
-            W_small(i,3:10)=[datapointcolleft(1,1:4),datapointcolright(1,1:4)];
-            W_small(i,11:14)=[w1,w2,w3,w4];
-            continue
-        end
-        %h4
-        if line_up+line_low+col_left+col_right>0
+    %h3
+    if line_up*line_low<10e-16 &&col_left*col_right>0
+        [w1,w2,w3,w4]=colinterp4(datapointcolleft(1,1:4),datapointcolright(1,1:4),col(i),row(i));%注意这个函数里面需要判断一下哪个第二个元素为0，然后设置它的坐标和权重都是0
+        W_small(i,3:10)=[datapointcolleft(1,1:4),datapointcolright(1,1:4)];
+        W_small(i,11:14)=[w1,w2,w3,w4];
+        continue
+    end
+    %h4
+    if line_up+line_low+col_left+col_right>0
         h4data=[datapointlineup;datapointlinelow;datapointcolleft;datapointcolright];
         [a,b]=min(hedata(:,5));
         h4updistance=5;%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!上限值，非常重要
@@ -238,27 +239,27 @@ for i=1:smallnum
             break
         end
         if b<=2
-            [w1,w2]=lineinterp2(h4data(b,:));
-             W_small(i,3:6)=h4data(b,:);
-             W_small(i,11:12)=[w1,w2];
-             continue
+            [w1,w2]=lineinterp2(h4data(b,:),col(i),row(i));
+            W_small(i,3:6)=h4data(b,:);
+            W_small(i,11:12)=[w1,w2];
+            continue
         else
-             [w1,w2]=colinterp2(h4data(b,:));
-             W_small(i,3:6)=h4data(b,:);
-             W_small(i,11:12)=[w1,w2];
-             continue
+            [w1,w2]=colinterp2(h4data(b,:),col(i),row(i));
+            W_small(i,3:6)=h4data(b,:);
+            W_small(i,11:12)=[w1,w2];
+            continue
         end
-        end
-        %h5 计算整个大点区域和这个点之间的差距，选择最小的那个，如果距离最小的且符合我们的要求，就是用最临近插值
-        %\h6
-        %没有任何举动，即代表最后权重矩阵里都是0，在重组G里面需要进行判断，如果这样的话！！！！！！！！！！！！！！！！！！！！！！！！
-        %则利用背景速度将其去除
-
     end
-    % 根据得到的w_small进行重建G
-    %% 在上面对G和M矩阵进行重建后，计算m的值
+    %h5 计算整个大点区域和这个点之间的差距，选择最小的那个，如果距离最小的且符合我们的要求，就是用最临近插值
+    %\h6
+    %没有任何举动，即代表最后权重矩阵里都是0，在重组G里面需要进行判断，如果这样的话！！！！！！！！！！！！！！！！！！！！！！！！
+    %则利用背景速度将其去除
     
-    
-    
-    
-    %% 多种情况下的误差分析
+end
+% 根据得到的w_small进行重建G
+%% 在上面对G和M矩阵进行重建后，计算m的值
+
+
+
+
+%% 多种情况下的误差分析

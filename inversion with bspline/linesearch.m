@@ -6,8 +6,90 @@ function [point,sumdistance,big_num] = linesearch( row_big,row,x,y )
 %   -1代表找到了一个小于阈值的一个点，使用最临近插值，但需要注意的是这种方法的结果只在其他方法全部无效的情况下进行使用，而对于0这个值，则直接使用背景速度减去。
 %   -1的话这个点会放在第一个点的位置
 %   为了方便，0的距离将设为无限大
-
-
-
+big_num=0;
+num_left=0;
+num_right=0;
+n=length(row_big(1,:));
+point=zeros(1,4);
+updist=4;%指最临近插值所接受的格点之间的差距，即网格点之间的数目，乘以网格点的之间的距离即为距离，需要注意！！！！！！
+if abs(row-y)<10e-10 %先判断在不在同一行
+    if x-1>0
+    for j=x-1:-1:1
+        if row_big(1,j)>0
+            num_left=num_left+1;
+            big_left(1,1)=j;
+            big_left(1,2)=row;
+            break
+        end
+    end
+    end
+    if x+1<n
+    for j=x+1:n
+        if row_big(1,j)>0
+            num_right=num_right+1;
+            big_right(1,1)=j;
+            big_right(1,2)=row;
+            break
+        end
+    end
+    end
+else        %不在同一行
+    if row_big(1,x)>0   %看是否在首先看是否在同一列有没有大点
+        big_num=1;
+        point(1,1)=x;
+        point(1,2)=row;
+        point(1,3:4)=0;
+    else
+        if x-1>0
+        for j=x-1:-1:1
+            if row_big(1,j)>0
+                num_left=num_left+1;
+                big_left(1,1)=j;
+                big_left(1,2)=row;
+                break
+            end
+        end
+        end
+        if x+1<n
+        for j=x+1:n
+            if row_big(1,j)>0
+                num_right=num_right+1;
+                big_right(1,1)=j;
+                big_right(1,2)=row;
+                break
+            end
+        end
+        end
+    end   
+end
+     if num_left+num_right>1.5 %即有两个点
+         big_num=2;
+         point(1,1:2)=big_left;
+         point(1,3:4)=big_right;
+     else
+         if num_left>0
+             if sqrt((big_left(1,1)-x)^2+(big_left(1,2)-y)^2)<=updist %即距离最小的临近点
+                 point(1,1:2)=big_left;
+                 point(1,3:4)=0;
+                 big_num=-1;
+             end
+         end
+         if num_right>0
+             if sqrt((big_right(1,1)-x)^2+(big_right(1,2)-y)^2)<=updist
+                 point(1,1:2)=big_right;
+                 point(1,3:4)=0;                 
+                 big_num=-1;
+             end
+         end
+     end
+     if big_num==2
+         sumdistance=sqrt((point(1,1)-x)^2+(point(1,2)-y)^2)+sqrt((point(1,3)-x)^2+(point(1,4)-y)^2);
+     end
+     if abs(big_num)==1
+         sumdistance=sqrt((point(1,1)-x)^2+(point(1,2)-y)^2);
+     end
+     if big_num==0
+         sumdistance=inf;
+     end
 end
 
