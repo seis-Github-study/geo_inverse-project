@@ -1,4 +1,4 @@
-function [point,sumdistance,big_num] = colsearch( col_big,col,x,y )
+function [point,sumdistance,big_num] = colsearch( col_big,col,y,x )
 %用来寻找某一行是否有两个大点，如果没有的话，将把对应的返回成为0,同时big_num反映大点的数目，注意区分
 %   row_big代表某一行的寻找的数据，x，y分别代表所计算的点的坐标,row代表所寻找的行的y坐标
 %   point代表所寻找的点的坐标，如果是两个点的话，则分别是x_left,y_left,x_right,y_right,如果只有一个点返回的话，则代表恰好是在同一列上sumdistance代表距离之和
@@ -16,17 +16,17 @@ if abs(col-x)<10e-10 %先判断在不在同一列
     if y-1>0
     for j=y-1:-1:1
         if col_big(j,1)>0
-            num_down=num_down+1;
+            num_down=num_down+1
             big_down(1,1)=col;
             big_down(1,2)=j;
             break
         end
     end
     end
-    if y+1<n
+    if y+1<=n
     for j=y+1:n
         if col_big(j,1)>0
-            num_up=num_up+1;
+            num_up=num_up+1
             big_up(1,1)=col;
             big_up(1,2)=j;
             break
@@ -50,7 +50,7 @@ else        %不在同一列
             end
         end
         end
-        if y+1<n
+        if y+1<=n
         for j=y+1:n
             if col_big(j,1)>0
                 num_up=num_up+1;

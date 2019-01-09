@@ -1,4 +1,4 @@
-function [point,sumdistance,big_num] = linesearch( row_big,row,x,y )
+function [point,sumdistance,big_num] = linesearch( row_big,row,y,x )
 %用来寻找某一行是否有两个大点，如果没有的话，将把对应的返回成为0,同时big_num反映大点的数目，注意区分
 %   row_big代表某一行的寻找的数据，x，y分别代表所计算的点的坐标,row代表所寻找的行的y坐标
 %   point代表所寻找的点的坐标，如果是两个点的话，则分别是x_left,y_left,x_right,y_right,如果只有一个点返回的话，则代表恰好是在同一列上sumdistance代表距离之和
@@ -23,7 +23,7 @@ if abs(row-y)<10e-10 %先判断在不在同一行
         end
     end
     end
-    if x+1<n
+    if x+1<=n
     for j=x+1:n
         if row_big(1,j)>0
             num_right=num_right+1;
@@ -50,7 +50,7 @@ else        %不在同一行
             end
         end
         end
-        if x+1<n
+        if x+1<=n
         for j=x+1:n
             if row_big(1,j)>0
                 num_right=num_right+1;
