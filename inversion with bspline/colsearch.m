@@ -16,7 +16,7 @@ if abs(col-x)<10e-10 %先判断在不在同一列
     if y-1>0
     for j=y-1:-1:1
         if col_big(j,1)>0
-            num_down=num_down+1
+            num_down=num_down+1;
             big_down(1,1)=col;
             big_down(1,2)=j;
             break
@@ -26,7 +26,7 @@ if abs(col-x)<10e-10 %先判断在不在同一列
     if y+1<=n
     for j=y+1:n
         if col_big(j,1)>0
-            num_up=num_up+1
+            num_up=num_up+1;
             big_up(1,1)=col;
             big_up(1,2)=j;
             break
