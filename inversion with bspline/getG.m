@@ -20,15 +20,16 @@ yline=ymin:square:ymax; %线的范围
 G_raypath=zeros(ynum,xnum);
 G_raylength=zeros(ynum,xnum);
 % G矩阵横坐标为x，纵坐标为y，即x=j,y=i;
-if (ypoint(2)-ypoint(1))~=0
+if (xpoint(2)-xpoint(1))~=0
 k=(ypoint(2)-ypoint(1))/(xpoint(2)-xpoint(1)); %计算斜率
 else
     %k is not exsit
 end
-if k==0
-    %k is zero
-end
-if k>0
+
+% if k==0
+%     %k is zero
+% end
+if k>=0
     if ypoint(2)<ypoint(1)          %if the start point is in the higher value,we change the start and end point which has different effect on the result
         x_tmp=xpoint(1);
         y_tmp=ypoint(1);
@@ -62,7 +63,7 @@ if k>0
     x1=xpoint(1); %start location of the point(x,y)
     y1=ypoint(1);
     
-    while(~(x_now==x_end &&y_now==y_end))
+    while(~((x_now==x_end) && (y_now==y_end)))
         x_next_grid=xline(x_now)+square;
         y_next_grid=yline(y_now)+square;
         k_tmp=(y_next_grid-y1)/(x_next_grid-x1);
