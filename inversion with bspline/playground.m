@@ -1,39 +1,76 @@
+%% 生成模型和模拟数据
+% 2019.1.14需要补充完成ref情况下的解
 clear
-x=10:10:100;
-x=x-5;
+% x=10:10:100;
+% x=x-5;
+k1=1;
+% 生成模拟数据方案1
+% startnum=5;%这是以组来生成数据的，这里的是震源点每组startnum组，每组10个，接收点也类似
+% endnum=3;
+% y0interval=(1100-100)/(startnum-1);%这是之间的间隔
+% y1interval=(1100-100)/(endnum-1);
+% G=zeros(startnum*endnum*100,110);
+% figure(1)
+% for m=1:startnum
+%     for n=1:endnum
+%         for i=1:10
+%             for j=1:10
+% %                 ypoint=[y0interval*(m-1)+x(i),y1interval*(n-1)+x(j)];
+%                 xpoint=[0,1000];
+%                 plot(xpoint,ypoint)
+%                 hold on
+%                 [G1,G2]=getG(xpoint,ypoint,100,0,1000,0,1100);
+%                 G(k1,:)=G1;
+%                 k1=k1+1;
+%             end
+%         end
+%     end
+% end
+% hold off
 
-k=1;
-startnum=5;
-endnum=3;
-y0interval=(1100-100)/(startnum-1);
-y1interval=(1100-100)/(endnum-1);
-G=zeros(startnum*endnum*100,110);
+%生成模拟数据方案2
+startnum=20;
+endnum=20;
+x0=0;
+x1=1000;
+y0=0;
+y1=1000;
+square=50;
+interval=(y1-y0)/(startnum);
+G=zeros(startnum*endnum,(x1-x0)*(y1-y0)/(square*square));
 figure(1)
 for m=1:startnum
     for n=1:endnum
-        for i=1:10
-            for j=1:10
-                ypoint=[y0interval*(m-1)+x(i),y1interval*(n-1)+x(j)];
-                xpoint=[0,1000];
+        
+%                 ypoint=[y0interval*(m-1)+x(i),y1interval*(n-1)+x(j)];
+                ypoint=[(m-0.5)*interval,(n-0.5)*interval+0.5];
+                xpoint=[x0,x1];
                 plot(xpoint,ypoint)
                 hold on
-                [G1,G2]=getG(xpoint,ypoint,100,0,1000,0,1100);
-                G(k,:)=G1;
-                k=k+1;
-            end
-        end
+                [G1,G2]=getG(xpoint,ypoint,square,x0,x1,y0,y1); %完全在边缘点的时候会出现bug，暂时没有时间去修复这个bug了，自己注意一下
+                G(k1,:)=G1;
+                k1=k1+1;
     end
 end
 hold off
-%%
-[U,S,V]=svd(G);
-Vp=V(:,1:86);
-Rm=diag(Vp*Vp');
-xnum=10;
-ynum=11;
+for i=1:(y1-y0)/square
+    for j=1:(x1-x0)/square
+        m((y1-y0)/square*(i-1)+j,1)=3+0.05*(-1)^(i+j);
+    end
+end
+d=G*m;
+%% 插值的各种参数
 %% 准备工作完成，下面进行计算
 %由于基本的理论还需要测试完成，因此这部分只是一个初步的示例，并不代表最终的结果
 %这部分的目的即把较小的敏感度矩阵的数值利用插值来进行替代，需要好好研究一下双线性插值这个算法
+
+
+%重要参数！！
+G_sensitivity_low=300;
+
+
+xnum=(x1-x0)/square;
+ynum=(y1-y0)/square;
 G_sensitivity=zeros(1,xnum*ynum);
 for i=1:xnum*ynum
     G_sensitivity(1,i)=sum(G(:,i));
@@ -41,7 +78,7 @@ end
 
 
 %敏感度下限值
-G_sensitivity_low=7000;
+
 %将为0的矩阵元素设为-1
 I=find(G_sensitivity<10e-15);
 G_sensitivity(I)=-1;
@@ -262,19 +299,19 @@ for i=1:small_num
     %h4 检索插值得到的最近点(行或列插值得到)
     if line_up+line_low+col_left+col_right>0
         h4data=[datapointlineup;datapointlinelow;datapointcolleft;datapointcolright];
-        [a,b]=min(hedata(:,5));
-        h4updistance=5;%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!上限值，非常重要
+        [a,b]=min(h4data(:,5));
+        h4updistance=6;%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!上限值，非常重要
         if b>updistance
             break
         end
         if b<=2
             [w1,w2]=lineinterp2(h4data(b,:),col(i),row(i));
-            W_small(i,3:6)=h4data(b,:);
+            W_small(i,3:6)=h4data(b,1:4);
             W_small(i,11:12)=[w1,w2];
             continue
         else
             [w1,w2]=colinterp2(h4data(b,:),col(i),row(i));
-            W_small(i,3:6)=h4data(b,:);
+            W_small(i,3:6)=h4data(b,1:4);
             W_small(i,11:12)=[w1,w2];
             continue
         end
@@ -301,15 +338,10 @@ for i=1:small_num
         break
     end
     W_small(i,3:4)=h2data(b,1:2);
-    W_small(i,11)=1;
-    
-    
+    W_small(i,11)=1;    
 end
-
-%     %\h6
-%     %没有任何举动，即代表最后权重矩阵里都是0，在重组G里面需要进行判断，如果这样的话！！！！！！！！！！！！！！！！！！！！！！！！
-%     %则利用背景速度将其去除
-%% 利用权重矩阵W_small进行重组（注意这只是记录了信息，并不是新矩阵w）
+ %% 利用权重矩阵W_small进行重组（注意这只是记录了信息，并不是新矩阵w）
+ %更新：我已经完成了权重矩阵W的构成
 % point,pointa,,pointb,,pointc,,pointd,wa,wb,wc,wd     (x,y)
 G_new=G;
 %d_new=d;
@@ -343,49 +375,132 @@ for k=1:small_num
 end
 %% 储存大点小点和没有数据的点（零点）
 %x,y,store_num,type（1代表大点，0代表小点，-1代表零点或者未能够进行插值的点）
-% m_store=zeros(ynum*xnum,1);
-% ref_c=3; %参考速度
-% num_big=0;
-% num_sma=0;
-% num_ref=0;
-% for i=1:ynum
-%     for j=1:xnum
-%         m_store(ynum*(i-1)+j,1)=j;
-%         m_store(ynum*(i-1)+j,2)=i;
-%         m_store(ynum*(i-1)+j,3)=ynum*(i-1)+j;
-%         if G_sensitivity(i,j)>10e-16
-%             m_store(ynum*(i-1)+j,4)=1;
-%             num_big=num_big+1;
-%         else
-%             if G_sensitivity(i,j)<-0.00005        %没有数据点
-%                 m_store(ynum*(i-1)+j,4)=-1;
-%                 num_ref=num_ref+1;
-%             end
-%         end
-%         if abs(G_sensitivity(i,j))<0.00005 %为0的情况
-%             if sum(W_small(k,11:14))>10e-10%有进行插值
-%                 m_store(ynum*(i-1)+j,4)=0;
-%                 num_sma=num_sma+1;
-%             else
-%                 m_store(ynum*(i-1)+j,4)=-1;
-%                 num_ref=num_ref+1;
-%             end
-%         end
-%     end
-% end
-% k1=1;
-% k2=1;
-% G_fresh=zeros()
-% for n=1:xnum*ynum
-%     if sum(G(:,n))>10-16
-%      G_fresh(:,k1)=G(:,n);
-%      k1=k1+1;
-%     end
-% end
-%     [U1,S1,V1]=svd(G_new);
-%     for i=1:84
-%         S1_inv(i,i)=1/S1(i,i);
-%     end
-%     Vp1=V1(:,1:84);
-%     Up1=U1(:,1:84);
-%     Rm1=diag(Vp1*S1_inv*Up1'*G);
+m_store=zeros(ynum*xnum,1);
+ref_c=3; %参考速度
+num_big=0;
+num_sma=0;
+num_ref=0;
+for i=1:ynum
+    for j=1:xnum
+        m_store(ynum*(i-1)+j,1)=j;
+        m_store(ynum*(i-1)+j,2)=i;
+        m_store(ynum*(i-1)+j,3)=ynum*(i-1)+j;
+        if G_sensitivity(i,j)>10e-16
+            m_store(ynum*(i-1)+j,4)=1;
+            num_big=num_big+1;
+        else
+            if G_sensitivity(i,j)<-0.00005        %没有数据点
+                m_store(ynum*(i-1)+j,4)=-1;
+                num_ref=num_ref+1;
+            end
+        end
+        if abs(G_sensitivity(i,j))<0.00005 %为0的情况
+            if sum(W_small(k,11:14))>10e-10%有进行插值
+                m_store(ynum*(i-1)+j,4)=0;
+                num_sma=num_sma+1;
+            else
+                m_store(ynum*(i-1)+j,4)=-1;
+                num_ref=num_ref+1;
+            end
+        end
+    end
+end
+k1=1;
+k2=1;
+Gline=length(G(:,1));
+G_fresh=zeros(Gline,num_big+num_sma);
+G_newfresh=zeros(Gline,num_big);
+W_tmp=zeros(xnum*ynum,num_big);
+W_fresh=zeros(num_big+num_sma,num_big);
+for n=1:xnum*ynum
+    if sum(G(:,n))>1
+     G_fresh(:,k1)=G(:,n);
+     k1=k1+1;
+    end
+    if sum(G_new(:,n))>1
+     G_newfresh(:,k2)=G_new(:,n);
+     k2=k2+1;
+    end
+end
+% W清除计划
+kcol=1;
+kline=1;
+for n=1:xnum*ynum    %清除列
+    if sum(W(:,n))>0.1
+        W_tmp(:,kcol)=W(:,n);
+        kcol=kcol+1;
+    end
+end
+
+for n=1:startnum*endnum    %清除行
+    if sum(W_tmp(n,:))>0.01
+        W_fresh(kline,:)=W_tmp(n,:);
+        kline=kline+1;
+    end
+end
+%% 开始测试计算结果
+% SVD
+[U,S,V]=svd(G_fresh);
+IU=find(abs(U)<10e-15);
+U(IU)=0;
+IS=find(abs(S)<10e-15);
+S(IS)=0;
+IV=find(abs(V)<10e-15);
+V(IV)=0;
+n=95;
+for i=1:n
+    t(i)=U(:,i)'*d/S(i,i);
+end
+figure(5)
+plot(t)
+Vp=V(:,1:n);
+Up=U(:,1:n);
+S_inverse=zeros(n,n);
+for i=1:n
+    S_inverse(i,i)=1/S(i,i);
+end
+Rm=diag(Vp*Vp');
+m_USV=Vp*Vp'*m;
+
+[U1,S1,V1]=svd(G_newfresh);
+IU1=find(abs(U1)<10e-15);
+U1(IU1)=0;
+IS1=find(abs(S1)<10e-15);
+S1(IS1)=0;
+IV1=find(abs(V1)<10e-15);%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!注意abs
+V1(IV1)=0;
+n=70;
+for i=1:n
+    t1(i)=U1(:,i)'*d/S1(i,i);
+end
+figure(6)
+plot(t1)
+Vp1=V1(:,1:n);
+Up1=U1(:,1:n);
+S_inverse1=zeros(n,n);
+for i=1:n
+    S_inverse1(i,i)=1/S1(i,i);
+end
+Rm1=diag(Vp1*Vp1');
+
+k=1;
+for i=1:xnum*ynum
+    if m_store(i,4)==1
+        Rm_compare(k,1)=Rm(i,1);
+        m_compare(k,1)=m(i,1);
+        k=k+1;
+    end
+end
+
+%m_U1VUS1=W_fresh*Vp1*Vp1'*m_compare;
+ m_U1VUS1=W_fresh*Vp1*S_inverse1*Up1'*d;
+figure(7)
+plot(Rm_compare,'r-')
+hold on
+plot(Rm1)
+figure(8)
+plot(m,'r-*')
+hold on
+plot(m_USV,'g--')
+hold on
+plot(m_U1VUS1,'r--')
