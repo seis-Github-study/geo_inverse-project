@@ -29,36 +29,70 @@ k1=1;
 % hold off
 
 %生成模拟数据方案2
-startnum=20;
-endnum=20;
+startnum=15;
+endnum=5;
 x0=0;
 x1=1000;
 y0=0;
 y1=1000;
-square=50;
-interval=(y1-y0)/(startnum);
+square=100;
+interval1=(y1-y0)/(startnum);
+interval2=(y1-y0)/(endnum);
+xnum=(x1-x0)/square;
+ynum=(y1-y0)/square;
 G=zeros(startnum*endnum,(x1-x0)*(y1-y0)/(square*square));
+G_raypath=zeros(ynum,xnum);
 figure(1)
 for m=1:startnum
     for n=1:endnum
         
 %                 ypoint=[y0interval*(m-1)+x(i),y1interval*(n-1)+x(j)];
-                ypoint=[(m-0.5)*interval,(n-0.5)*interval+0.5];
+                ypoint=[(m-0.5)*interval1,(n-0.5)*interval2+0.01];
                 xpoint=[x0,x1];
                 plot(xpoint,ypoint)
                 hold on
                 [G1,G2]=getG(xpoint,ypoint,square,x0,x1,y0,y1); %完全在边缘点的时候会出现bug，暂时没有时间去修复这个bug了，自己注意一下
                 G(k1,:)=G1;
+                G_raypath=G_raypath+G2;
                 k1=k1+1;
     end
 end
+title('raypath')
 hold off
+% for i=1:(y1-y0)/square
+%     for j=1:(x1-x0)/square
+%         m((y1-y0)/square*(i-1)+j,1)=3;
+%     end
+% end
+AVE=mean(G_raypath);
+G_raypathplot=ones(ynum+1,xnum+1);
+G_raypathplot=G_raypathplot*10;
+   figure(2)
+  for i=1:ynum+1
+     for j=1:xnum+1
+         X1(i,j)=(j-1)*100;
+         Y1(i,j)=(i-1)*100;
+         if i<=ynum && j<=xnum
+         G_raypathplot(i,j)=G_raypath(i,j);
+         end
+     end
+  end
+  %[XX,YY,ZZ]=griddata(X,Y,Z,linspace(min(X),max(X))',linspace(min(X),max(Y)),'v4');
+%  [XX,YY]=meshgrid(X,Y);
+%  ZZ=meshgrid(Z,Z);
+ pcolor(X1,Y1,G_raypathplot)
+%shading interp
+grid on
+ view(0,90)
+ colorbar
+ title('raypath density')
 for i=1:(y1-y0)/square
     for j=1:(x1-x0)/square
-        m((y1-y0)/square*(i-1)+j,1)=3+0.05*(-1)^(i+j);
+        m((y1-y0)/square*(i-1)+j,1)=100+100*(i);
     end
 end
-d=G*m;
+ref_c=mean(m);%参考速度，或者说是平均速度
+d=G*m+random('norm',0,1000);
 %% 插值的各种参数
 %% 准备工作完成，下面进行计算
 %由于基本的理论还需要测试完成，因此这部分只是一个初步的示例，并不代表最终的结果
@@ -66,11 +100,10 @@ d=G*m;
 
 
 %重要参数！！
-G_sensitivity_low=300;
+G_sensitivity_low=200;
 
 
-xnum=(x1-x0)/square;
-ynum=(y1-y0)/square;
+
 G_sensitivity=zeros(1,xnum*ynum);
 for i=1:xnum*ynum
     G_sensitivity(1,i)=sum(G(:,i));
@@ -302,7 +335,7 @@ for i=1:small_num
         [a,b]=min(h4data(:,5));
         h4updistance=6;%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!上限值，非常重要
         if b>updistance
-            break
+            continue
         end
         if b<=2
             [w1,w2]=lineinterp2(h4data(b,:),col(i),row(i));
@@ -334,20 +367,21 @@ for i=1:small_num
     h2data(2,:)=datapointcol(b,:);
     [a,b]=min(h2data(:,5));
     h2updistance=5;%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!上限值，非常重要
-    if a>updistance
-        break
-    end
+    if a<=updistance
     W_small(i,3:4)=h2data(b,1:2);
-    W_small(i,11)=1;    
+    W_small(i,11)=1;
+    end
+ 
+ 
 end
  %% 利用权重矩阵W_small进行重组（注意这只是记录了信息，并不是新矩阵w）
  %更新：我已经完成了权重矩阵W的构成
 % point,pointa,,pointb,,pointc,,pointd,wa,wb,wc,wd     (x,y)
 G_new=G;
-%d_new=d;
+d_new=d;
 for k=1:small_num
     if sum(W_small(k,11:14))<10e-10
-        %d_new=d_new-ref_c*G(:,W_small(k,1)+(W_small(k,2)-1)*xnum);
+        d_new=d_new-ref_c*G(:,W_small(k,1)+(W_small(k,2)-1)*xnum);
         continue
     end
     for t=1:4
@@ -363,7 +397,8 @@ nn=length(row_small);
 W=eye(xnum*ynum,xnum*ynum);
 for k=1:small_num
     if sum(W_small(k,11:14))<10e-10
-        %d_new=d_new-ref_c*G(:,W_small(k,1)+(W_small(k,2)-1)*xnum);
+        d_new=d_new-ref_c*G(:,W_small(k,1)+(W_small(k,2)-1)*xnum);
+        W(W_small(k,1)+(W_small(k,2)-1)*xnum,W_small(k,1)+(W_small(k,2)-1)*xnum)=0;
         continue
     end
     for t=1:4
@@ -375,8 +410,7 @@ for k=1:small_num
 end
 %% 储存大点小点和没有数据的点（零点）
 %x,y,store_num,type（1代表大点，0代表小点，-1代表零点或者未能够进行插值的点）
-m_store=zeros(ynum*xnum,1);
-ref_c=3; %参考速度
+m_store=zeros(ynum*xnum,1); %参考速度
 num_big=0;
 num_sma=0;
 num_ref=0;
@@ -408,16 +442,16 @@ end
 k1=1;
 k2=1;
 Gline=length(G(:,1));
-G_fresh=zeros(Gline,num_big+num_sma);
+%G_fresh=zeros(Gline,num_big+num_sma);
 G_newfresh=zeros(Gline,num_big);
 W_tmp=zeros(xnum*ynum,num_big);
-W_fresh=zeros(num_big+num_sma,num_big);
+W_fresh=zeros(xnum*ynum,num_big);
 for n=1:xnum*ynum
     if sum(G(:,n))>1
      G_fresh(:,k1)=G(:,n);
      k1=k1+1;
     end
-    if sum(G_new(:,n))>1
+    if m_store(n,4)>0.1
      G_newfresh(:,k2)=G_new(:,n);
      k2=k2+1;
     end
@@ -425,82 +459,273 @@ end
 % W清除计划
 kcol=1;
 kline=1;
-for n=1:xnum*ynum    %清除列
-    if sum(W(:,n))>0.1
-        W_tmp(:,kcol)=W(:,n);
+for n=1:xnum*ynum    %清除列 %行没有清除的必要
+    if m_store(n,4)>0.1
+        W_fresh(:,kcol)=W(:,n);
         kcol=kcol+1;
     end
 end
-
-for n=1:startnum*endnum    %清除行
-    if sum(W_tmp(n,:))>0.01
-        W_fresh(kline,:)=W_tmp(n,:);
-        kline=kline+1;
+m_fresh=zeros(xnum*ynum,1);
+for n=1:xnum*ynum    %清除列 %行没有清除的必要
+    if m_store(n,4)<-0.1
+       m_fresh(n,1)=ref_c;
     end
 end
+% for n=1:xnum*ynum    %清除行
+%     if sum(W_tmp(n,:))>0.01
+%         W_fresh(kline,:)=W_tmp(n,:);
+%         kline=kline+1;
+%     end
+% end
 %% 开始测试计算结果
 % SVD
-[U,S,V]=svd(G_fresh);
-IU=find(abs(U)<10e-15);
-U(IU)=0;
-IS=find(abs(S)<10e-15);
-S(IS)=0;
-IV=find(abs(V)<10e-15);
-V(IV)=0;
-n=95;
-for i=1:n
-    t(i)=U(:,i)'*d/S(i,i);
-end
-figure(5)
-plot(t)
-Vp=V(:,1:n);
-Up=U(:,1:n);
-S_inverse=zeros(n,n);
-for i=1:n
-    S_inverse(i,i)=1/S(i,i);
-end
-Rm=diag(Vp*Vp');
-m_USV=Vp*Vp'*m;
 
-[U1,S1,V1]=svd(G_newfresh);
-IU1=find(abs(U1)<10e-15);
-U1(IU1)=0;
-IS1=find(abs(S1)<10e-15);
-S1(IS1)=0;
-IV1=find(abs(V1)<10e-15);%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!注意abs
-V1(IV1)=0;
-n=70;
-for i=1:n
-    t1(i)=U1(:,i)'*d/S1(i,i);
-end
-figure(6)
-plot(t1)
-Vp1=V1(:,1:n);
-Up1=U1(:,1:n);
-S_inverse1=zeros(n,n);
-for i=1:n
-    S_inverse1(i,i)=1/S1(i,i);
-end
-Rm1=diag(Vp1*Vp1');
 
-k=1;
-for i=1:xnum*ynum
-    if m_store(i,4)==1
-        Rm_compare(k,1)=Rm(i,1);
-        m_compare(k,1)=m(i,1);
-        k=k+1;
-    end
+%  [U,S,V]=svd(G);
+% % IU=find(abs(U)<10e-5);
+% % U(IU)=0;
+% % IS=find(abs(S)<10e-5);
+% % S(IS)=0;
+% % IV=find(abs(V)<10e-5);
+% % V(IV)=0;
+% n=85;
+% for i=1:n
+%     t(i)=abs(U(:,i)'*d/S(i,i));
+% end
+% figure(5)
+% plot(t)
+% Vp=V(:,1:n);
+% Up=U(:,1:n);
+% S_inverse=zeros(n,n);
+% for i=1:n
+%     S_inverse(i,i)=1/S(i,i);
+% end
+% Rm=diag(Vp*Vp');
+% %m_USV=Vp*Vp'*m;
+% m_USV=Vp*S_inverse*Up'*d;
+% [U1,S1,V1]=svd(G_newfresh);
+% % IU1=find(abs(U1)<10e-4);
+% % U1(IU1)=0;
+% % IS1=find(abs(S1)<10e-4);
+% % S1(IS1)=0;
+% % IV1=find(abs(V1)<10e-4);%!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!注意abs
+% % V1(IV1)=0;
+% n=56;
+% for i=1:n
+%     t1(i)=abs(U1(:,i)'*d/S1(i,i));
+% end
+% figure(6)
+% plot(t1)
+% Vp1=V1(:,1:n);
+% Up1=U1(:,1:n);
+% S_inverse1=zeros(n,n);
+% for i=1:n
+%     S_inverse1(i,i)=1/S1(i,i);
+% end
+% Rm1=diag(Vp1*Vp1');
+% 
+% k=1;
+% for i=1:xnum*ynum-num_ref
+%     if m_store(i,4)==1
+%         Rm_compare(k,1)=Rm(i,1);
+%         m_compare(k,1)=m(i,1);
+%         k=k+1;
+%     end
+% end
+% 
+% %m_U1VUS1=W_fresh*(Vp1*Vp1')*m_compare;
+% m_U1VUS1=W_fresh*Vp1*S_inverse1*Up1'*d+m_fresh;
+% figure(7)
+% plot(Rm_compare,'r*')
+% hold on
+% plot(Rm1)
+% figure(8)
+% plot(m,'r-')
+% hold on
+% plot(m_USV,'g--')
+% hold on
+%  plot(m_U1VUS1,'b--')
+%  hold off
+% 
+%  for i=1:ynum
+%      for j=1:xnum
+%          X((i-1)*xnum+j,1)=x0+(j-0.5)*square;
+%          Y((i-1)*xnum+j,1)=y0+(i-0.5)*square;
+%      end
+%  end
+%  %Z=m_U1VUS1;
+%  Z=m_USV;
+%  [XX,YY,ZZ]=griddata(X,Y,Z,linspace(min(X),max(X))',linspace(min(X),max(Y)),'v4');
+% %  [XX,YY]=meshgrid(X,Y);
+% %  ZZ=meshgrid(Z,Z);
+%  figure(9)
+%  pcolor(XX,YY,ZZ)
+% shading interp
+%  view(0,90)
+%  colorbar
+%  figure(10)
+%  Z=m_U1VUS1;
+%   [XX,YY,ZZ]=griddata(X,Y,Z,linspace(min(X),max(X))',linspace(min(X),max(Y)),'v4');
+% %  [XX,YY]=meshgrid(X,Y);
+% %  ZZ=meshgrid(Z,Z);
+%  pcolor(XX,YY,ZZ)
+% shading interp
+%  view(0,90)
+%  colorbar
+%  figure(11)
+%   Z=m;
+%   [XX,YY,ZZ]=griddata(X,Y,Z,linspace(min(X),max(X))',linspace(min(X),max(Y)),'v4');
+% %  [XX,YY]=meshgrid(X,Y);
+% %  ZZ=meshgrid(Z,Z);
+%  pcolor(XX,YY,ZZ)
+% shading interp
+%  view(0,90)
+%  colorbar
+ 
+%% test TR
+%ONE 
+L0=eye(num_big,num_big);
+number=1000;
+low=-5;
+up=3;
+interval=(up-low)/number;
+t=low:interval:up;
+%a_c_L=zeros(1000,1);
+m_c_L0=zeros(number,3);
+m_L0_value=zeros(num_big,number);
+for i=1:number
+    m_c_L0(i,1)=10^t(i);%α的数值
+    m_L0_value(:,i)=getm(G_newfresh,d_new,L0,m_c_L0(i,1));
+    m_c_L0(i,2)=norm(L0*m_L0_value(:,i));%||m||
+    m_c_L0(i,3)=norm(G_newfresh* m_L0_value(:,i)-d_new); %||Gm-d||
 end
+%%
+figure(20)
+plot(log10(m_c_L0(:,3)),(m_c_L0(:,2)))
+xlabel('||Gm-d||')
+ylabel('||m||')
+figure(21)
+plot(m_c_L0(:,3),m_c_L0(:,2))
+xlabel('||Gm-d||')
+ylabel('||m||')
+%xlim([0,0.005])
+ m_L0_W=getm(G_newfresh,d_new,L0,53);
+ m_L0_NEW=W_fresh*m_L0_W;
+  figure(23)
+ Z=m_L0_NEW;
+  for i=1:ynum
+     for j=1:xnum
+         X((i-1)*xnum+j,1)=x0+(j-0.5)*square;
+         Y((i-1)*xnum+j,1)=y0+(i-0.5)*square;
+     end
+ end
+  [XX,YY,ZZ]=griddata(X,Y,Z,linspace(min(X),max(X))',linspace(min(X),max(Y)),'v4');
+%  [XX,YY]=meshgrid(X,Y);
+%  ZZ=meshgrid(Z,Z);
+ pcolor(XX,YY,ZZ)
+shading interp
+ view(0,90)
+ colorbar
+ %%
+% a=6.792036326171850e-04
+% m=getm(G_newfresh,d_new,L0,6.792036326171850e-04);
+% norm(L0*m)
+% norm(G*m-d)
+% figure(3)
+% plot(x,m)
+% xlabel('x')
+% ylabel('m')
+% title('a=6.792*10^-4')
 
-%m_U1VUS1=W_fresh*Vp1*Vp1'*m_compare;
- m_U1VUS1=W_fresh*Vp1*S_inverse1*Up1'*d;
-figure(7)
-plot(Rm_compare,'r-')
-hold on
-plot(Rm1)
-figure(8)
-plot(m,'r-*')
-hold on
-plot(m_USV,'g--')
-hold on
-plot(m_U1VUS1,'r--')
+%original
+L0_or=eye(xnum*ynum,xnum*ynum);
+number=1000;
+low=-5;
+up=3;
+interval=(up-low)/number;
+t=low:interval:up;
+%a_c_L=zeros(1000,1);
+m_c_L0_or=zeros(number,3);
+m_L0_value_or=zeros(xnum*ynum,number);
+for i=1:number
+    m_c_L0_or(i,1)=10^t(i);%α的数值
+    m_L0_value_or(:,i)=getm(G,d,L0_or,m_c_L0_or(i,1));
+    m_c_L0_or(i,2)=norm(L0_or*m_L0_value_or(:,i));%||m||
+    m_c_L0_or(i,3)=norm(G* m_L0_value_or(:,i)-d); %||Gm-d||
+end
+%%
+m_L0_or=getm(G,d,L0_or,100);%0.1076);
+figure(24)
+plot(log10(m_c_L0_or(:,3)),(m_c_L0_or(:,2)))
+xlabel('||Gm-d||')
+ylabel('||m||')
+figure(25)
+plot(m_c_L0_or(:,3),m_c_L0_or(:,2))
+xlabel('||Gm-d||')
+ylabel('||m||')
+%xlim([0,0.005])
+
+  figure(26)
+ Z=m_L0_or;
+  for i=1:ynum
+     for j=1:xnum
+         X((i-1)*xnum+j,1)=x0+(j-0.5)*square;
+         Y((i-1)*xnum+j,1)=y0+(i-0.5)*square;
+     end
+ end
+  [XX,YY,ZZ]=griddata(X,Y,Z,linspace(min(X),max(X))',linspace(min(X),max(Y)),'v4');
+%  [XX,YY]=meshgrid(X,Y);
+%  ZZ=meshgrid(Z,Z);
+ pcolor(XX,YY,ZZ)
+shading interp
+ view(0,90)
+ colorbar
+   figure(27)
+ Z=m;
+  for i=1:ynum
+     for j=1:xnum
+         X((i-1)*xnum+j,1)=x0+(j-0.5)*square;
+         Y((i-1)*xnum+j,1)=y0+(i-0.5)*square;
+     end
+ end
+  [XX,YY,ZZ]=griddata(X,Y,Z,linspace(min(X),max(X))',linspace(min(X),max(Y)),'v4');
+%  [XX,YY]=meshgrid(X,Y);
+%  ZZ=meshgrid(Z,Z);
+ pcolor(XX,YY,ZZ)
+shading interp
+ view(0,90)
+ colorbar
+ figure(28)
+ Z=abs(m-m_L0_NEW);
+  for i=1:ynum
+     for j=1:xnum
+         X((i-1)*xnum+j,1)=x0+(j-0.5)*square;
+         Y((i-1)*xnum+j,1)=y0+(i-0.5)*square;
+     end
+ end
+  [XX,YY,ZZ]=griddata(X,Y,Z,linspace(min(X),max(X))',linspace(min(X),max(Y)),'v4');
+%  [XX,YY]=meshgrid(X,Y);
+%  ZZ=meshgrid(Z,Z);
+ pcolor(XX,YY,ZZ)
+shading interp
+caxis([0,150]);
+ view(0,90)
+ colorbar
+ title('new way')
+figure(29)
+ Z=abs(m-m_L0_or);
+  for i=1:ynum
+     for j=1:xnum
+         X((i-1)*xnum+j,1)=x0+(j-0.5)*square;
+         Y((i-1)*xnum+j,1)=y0+(i-0.5)*square;
+     end
+ end
+  [XX,YY,ZZ]=griddata(X,Y,Z,linspace(min(X),max(X))',linspace(min(X),max(Y)),'v4');
+%  [XX,YY]=meshgrid(X,Y);
+%  ZZ=meshgrid(Z,Z);
+ pcolor(XX,YY,ZZ)
+shading interp
+caxis([0,150]);
+ view(0,90)
+ colorbar
+ title('original way')
