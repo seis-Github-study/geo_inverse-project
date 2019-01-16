@@ -100,7 +100,7 @@ d=G*m+random('norm',0,1000);
 
 
 %重要参数！！
-G_sensitivity_low=200;
+G_sensitivity_low=300;
 
 
 
@@ -609,7 +609,7 @@ plot(m_c_L0(:,3),m_c_L0(:,2))
 xlabel('||Gm-d||')
 ylabel('||m||')
 %xlim([0,0.005])
- m_L0_W=getm(G_newfresh,d_new,L0,10.185913880541170);
+ m_L0_W=getm(G_newfresh,d_new,L0,0.164437172321493);
 
  m_L0_NEW=W_fresh*m_L0_W;
   figure(23)
@@ -733,7 +733,7 @@ caxis([0,150]);
  title('original way')
  
  %% 分辨率比较
-  Rm_NEW=diag(Resolutionm(G_newfresh,L0,0.3311));
+  Rm_NEW=diag(Resolutionm(G_newfresh,L0,0.164437172321493));
   Rm_or=diag(Resolutionm(G,L0_or,0.3311));
   k_Rm=1;
  for i=1:xnum*ynum

@@ -100,7 +100,7 @@ d=G*m+random('norm',0,1000);
 
 
 %重要参数！！
-G_sensitivity_low=200;
+G_sensitivity_low=300;
 
 
 
